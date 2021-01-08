@@ -1,8 +1,10 @@
-import { Body, Controller, Get, Post, Param, Delete, Patch, Query } from '@nestjs/common';
+// controller contracts different scenarios a route receives and forks it to the right service end point
+import { Body, Controller, Get, Post, Param, Delete, Patch, Query, UsePipes, ValidationPipe } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import {Task, TaskStatus} from './task.model';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { GetTasksFilterDto } from './dto/get-tasks-filter.dto';
+import { TaskStatusValidationPipe } from './pipes/task-status-validation.pipe';
 
 
 @Controller('tasks')
@@ -10,7 +12,9 @@ export class TasksController {
     constructor(private tasksService: TasksService){}
 
     @Get()
-    getTasks(@Query() filterDto: GetTasksFilterDto): Task[] {
+    // validation pipe inserted into query for filter optional, 
+    // checking status correctness and search not empty and both optional
+    getTasks(@Query(ValidationPipe) filterDto: GetTasksFilterDto): Task[] {
         if(Object.keys(filterDto).length){
             return this.tasksService.getTasksWithFilters(filterDto);
         }else{
@@ -43,6 +47,8 @@ export class TasksController {
 
     //USING DTO
     @Post()
+    //using DTO to validate data with pipe against DTO
+    @UsePipes(ValidationPipe)
     createTask(
         @Body() createTaskDto: CreateTaskDto
     ) : Task{
@@ -55,7 +61,11 @@ export class TasksController {
     }
 
     @Patch('/:id/status')
-    updateTaskStatus(@Param('id') id:string, @Body('status') status: TaskStatus){
+    updateTaskStatus(
+        @Param('id') id:string, 
+        // custom validation pipe added to parameter status
+        @Body('status', TaskStatusValidationPipe) status: TaskStatus,
+        ): Task{
         return this.tasksService.updateTaskStatus(id, status);
     }
 
