@@ -1,4 +1,4 @@
-// service recieves direction from controller and performs route end point logic, and only store business logic
+// service receives direction from controller and performs route end point business logic
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -37,7 +37,7 @@ export class TasksService {
     
 
     async deleteTask(id:number):Promise<void>{
-        //typeorm delete method this passes element inside entity 
+        //typeorm delete method passes element inside entity 
         // ie.id and delete and return raw or effected types (recomended for performance instead of remove method) 
         const result = await this.taskRepository.delete(id);
 
