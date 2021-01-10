@@ -4,11 +4,12 @@ import { Task } from "./task.entity";
 import { TaskStatus } from './task-status.enum';
 import { GetTasksFilterDto } from "./dto/get-tasks-filter.dto";
 import {User} from '../auth/user.entity';
+import {InternalServerErrorException, Logger} from '@nestjs/common';
 
 // using repository as extra layer for persistence, and only store database logic
 @EntityRepository(Task)
 export class TaskRepository extends Repository<Task>{
-
+    private logger = new Logger('TaskRepository');
     // custom get tasks repository with extended logic of getting tasks with or without filters/search
     async getTasks(
         filterDto: GetTasksFilterDto,
@@ -32,8 +33,17 @@ export class TaskRepository extends Repository<Task>{
             query.andWhere('(task.title LIKE :search OR task.description LIKE :search)', {search: `%${search}%`}); 
         }
 
-        const tasks = await query.getMany();
-        return tasks;
+        try{
+            const tasks = await query.getMany();
+            return tasks;
+        }catch(error){
+            this.logger.error(`Failed to get tasks for user "${user.username}", 
+            Filters: ${JSON.stringify(filterDto)}`, error.stack);
+            throw new InternalServerErrorException();
+            
+        }
+
+       
     }
 
     // custom create task repository method for persistence
@@ -48,7 +58,16 @@ export class TaskRepository extends Repository<Task>{
         task.description = description;
         task.status = TaskStatus.OPEN;
         task.user = user;
-        await task.save();
+
+        try{
+            await task.save();
+        }catch(error){
+            this.logger.error(`Failed to create a task for user "${user.username}", 
+            data: ${JSON.stringify(createTaskDto)}`, error.stack);
+            throw new InternalServerErrorException();
+            
+        }
+        
         //deleting user property returned back for security
         delete task.user;
 
