@@ -3,17 +3,23 @@ import { CreateTaskDto } from "./dto/create-task.dto";
 import { Task } from "./task.entity";
 import { TaskStatus } from './task-status.enum';
 import { GetTasksFilterDto } from "./dto/get-tasks-filter.dto";
+import {User} from '../auth/user.entity';
 
 // using repository as extra layer for persistence, and only store database logic
 @EntityRepository(Task)
 export class TaskRepository extends Repository<Task>{
 
     // custom get tasks repository with extended logic of getting tasks with or without filters/search
-    async getTasks(filterDto: GetTasksFilterDto): Promise<Task[]>{
+    async getTasks(
+        filterDto: GetTasksFilterDto,
+        user: User,
+        ): Promise<Task[]>{
         const {status, search} = filterDto;
 
         // using query builder: used when the logic is more sophiscated than simple typeorm methods
         const query = this.createQueryBuilder('task');
+
+        query.where('task.userId = :userId', {userId: user.id})
 
         if(status){
             // first argument provide structure, second argument brings in params variable of status
@@ -31,14 +37,20 @@ export class TaskRepository extends Repository<Task>{
     }
 
     // custom create task repository method for persistence
-    async createTask(createTaskDto: CreateTaskDto): Promise<Task>{
+    async createTask(
+        createTaskDto: CreateTaskDto,
+        user:User,
+        ): Promise<Task>{
         const {title, description} = createTaskDto;
 
         const task = new Task();
         task.title = title;
         task.description = description;
         task.status = TaskStatus.OPEN;
+        task.user = user;
         await task.save();
+        //deleting user property returned back for security
+        delete task.user;
 
         return task;
     }
